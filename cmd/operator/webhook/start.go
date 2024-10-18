@@ -17,7 +17,6 @@ limitations under the License.
 package webhook
 
 import (
-	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -33,7 +32,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -217,11 +215,6 @@ func start() {
 		os.Exit(1)
 	}
 
-	client, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
-	if err != nil {
-		logger.Error(err, "Failed to create client")
-		os.Exit(1)
-	}
 
 	if err := wait.ExponentialBackoff(
 		wait.Backoff{
@@ -231,13 +224,7 @@ func start() {
 			Jitter:   0.1,
 		},
 		func() (bool, error) {
-			logger.Info("Syncing webhook secret", "name", webhookSecretName, "namespace", webhookSecretNamespace)
-			if err := certProvider.SyncSecret(context.TODO(), webhookSecretName, webhookSecretNamespace); err != nil {
-				if errors.IsAlreadyExists(err) || errors.IsConflict(err) {
-					return false, nil
-				}
-				return false, err
-			}
+			logger.Info("Syncing webhook secret, but hot really", "name", webhookSecretName, "namespace", webhookSecretNamespace)
 			return true, nil
 		},
 	); err != nil {
