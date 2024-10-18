@@ -43,7 +43,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -51,10 +50,7 @@ import (
 	sparkoperator "github.com/kubeflow/spark-operator"
 	"github.com/kubeflow/spark-operator/api/v1beta1"
 	"github.com/kubeflow/spark-operator/api/v1beta2"
-	"github.com/kubeflow/spark-operator/internal/controller/mutatingwebhookconfiguration"
-	"github.com/kubeflow/spark-operator/internal/controller/validatingwebhookconfiguration"
 	"github.com/kubeflow/spark-operator/internal/webhook"
-	"github.com/kubeflow/spark-operator/pkg/certificate"
 	"github.com/kubeflow/spark-operator/pkg/common"
 	"github.com/kubeflow/spark-operator/pkg/util"
 	// +kubebuilder:scaffold:imports
@@ -227,12 +223,6 @@ func start() {
 		os.Exit(1)
 	}
 
-	certProvider := certificate.NewProvider(
-		client,
-		webhookServiceName,
-		webhookServiceNamespace,
-	)
-
 	if err := wait.ExponentialBackoff(
 		wait.Backoff{
 			Steps:    5,
@@ -252,30 +242,6 @@ func start() {
 		},
 	); err != nil {
 		logger.Error(err, "Failed to sync webhook secret")
-		os.Exit(1)
-	}
-
-	logger.Info("Writing certificates", "path", webhookCertDir, "certificate name", webhookCertName, "key name", webhookKeyName)
-	if err := certProvider.WriteFile(webhookCertDir, webhookCertName, webhookKeyName); err != nil {
-		logger.Error(err, "Failed to save certificate")
-		os.Exit(1)
-	}
-
-	if err := mutatingwebhookconfiguration.NewReconciler(
-		mgr.GetClient(),
-		certProvider,
-		mutatingWebhookName,
-	).SetupWithManager(mgr, controller.Options{}); err != nil {
-		logger.Error(err, "Failed to create controller", "controller", "MutatingWebhookConfiguration")
-		os.Exit(1)
-	}
-
-	if err := validatingwebhookconfiguration.NewReconciler(
-		mgr.GetClient(),
-		certProvider,
-		validatingWebhookName,
-	).SetupWithManager(mgr, controller.Options{}); err != nil {
-		logger.Error(err, "Failed to create controller", "controller", "ValidatingWebhookConfiguration")
 		os.Exit(1)
 	}
 
