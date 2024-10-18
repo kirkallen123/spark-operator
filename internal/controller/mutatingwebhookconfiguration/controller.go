@@ -77,23 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) updateMutatingWebhookConfiguration(ctx context.Context, key types.NamespacedName) error {
-	webhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
-	if err := r.client.Get(ctx, key, webhook); err != nil {
-		return fmt.Errorf("failed to get mutating webhook configuration %v: %v", key, err)
-	}
-
-	caBundle, err := r.certProvider.CACert()
-	if err != nil {
-		return fmt.Errorf("failed to get CA certificate: %v", err)
-	}
-
-	newWebhook := webhook.DeepCopy()
-	for i := range newWebhook.Webhooks {
-		newWebhook.Webhooks[i].ClientConfig.CABundle = caBundle
-	}
-	if err := r.client.Update(ctx, newWebhook); err != nil {
-		return fmt.Errorf("failed to update mutating webhook configuration %v: %v", key, err)
-	}
+	logger.Info("Skipping updateMutatingWebhookConfiguration")
 
 	return nil
 }
